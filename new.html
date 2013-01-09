@@ -1,0 +1,36 @@
+<HTML>
+<HEAD>
+	<LINK rel="stylesheet" href="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.css" />
+	<SCRIPT src="http://code.jquery.com/jquery-1.6.4.min.js"></SCRIPT>
+	<SCRIPT src="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.js"></SCRIPT>
+</HEAD>
+
+<BODY>
+<DIV data-role='page'>
+	<DIV data-role='header'>
+		<H1>New Participant</H1>
+	</DIV>
+	
+	<DIV data-role='content' id='fear-list'>
+		<FORM method='post' action='/'  data-ajax='false' >
+			<INPUT type='hidden' name='new-participant' value='yes'/>
+			<DIV data-role='fieldcontain'>
+				<LABEL for='participant-id'> ID </LABEL>
+				<INPUT name='participant-id' id='participant-id' value='{{pid}}'/>
+			</DIV>
+			<INPUT type='submit' value='Create New Participant' />
+		</FORM>
+		
+		<FORM method='post' action='/'>
+			<DIV data-role='fieldcontain'>
+				<LABEL for='participant-id'> ID </LABEL>
+				<INPUT name='participant-id' id='participant-id'/>
+			</DIV>
+			<INPUT type='submit' value='Load Participant'>
+		</FORM>
+	</DIV>
+	<DIV data-role='content' id='fear-board'>
+	</DIV>
+</DIV>
+</BODY>
+</HTML>

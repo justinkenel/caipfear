@@ -1,0 +1,208 @@
+<HTML>
+<HEAD>
+	<LINK rel="stylesheet" href="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.css" />
+	<SCRIPT src="http://code.jquery.com/jquery-1.6.4.min.js"></SCRIPT>
+	<SCRIPT src="http://code.jquery.com/mobile/1.0/jquery.mobile-1.0.min.js"></SCRIPT>
+	<SCRIPT src="/js/jcanvas.js"> </SCRIPT>
+
+	<SCRIPT>
+		var draw_fears = undefined
+	
+		$(document).ready(function(){
+			var diameter = Math.min($(document).height(),$(document).width())
+			var radius = diameter/2
+			var board = $("<canvas width='diameterpx' height='diameterpx'>".replace(/diameter/g, diameter))
+			
+			board.css('position', 'absolute')
+			board.css('left', '0')
+			board.css('top', '0')
+			
+			board.drawArc({x:radius, y:radius, radius:radius, start:0, end:360, fillStyle:'#79FC4E'})
+			board.drawArc({x:radius, y:radius, radius:radius/2, start:0, end:360, fillStyle:'#FF2626'})
+			board.drawArc({x:radius, y:radius, radius:radius/15, start:0, end:360, fillStyle:'white'})
+			
+			board.click(function(obj){
+				dx = radius-obj.offsetX
+				dy = radius-obj.offsetY
+				
+				value = Math.ceil((radius - Math.sqrt(dx*dx + dy*dy))*100/radius)
+				
+				if(value > 0) {
+					$('#fear-value').attr('value', value).slider('refresh')
+					$('html, body').animate({scrollTop:$('#new-fear-form').offset().top})
+					$('#new-fear-form').trigger('expand')
+				}
+			})
+			
+			var box_width_half = radius/15/2
+			var box = $('<div>').css('left', radius-box_width_half).css('top', radius-box_width_half)
+			box.width(box_width_half*2).css('position', 'absolute')
+			box.css('text-align', 'center')
+			
+			var target = $('#fear-board')
+			target.width(diameter)
+			target.height(diameter)
+			target.append(board)
+			target.append(box)
+			
+			var fears=[{% for fear in fears %}
+				{ name:'{{fear.name}}', docname:'{{fear.docname}}', description:"{{fear.description}}", avoid:'{{fear.avoid}}', value:{{fear.value}},
+					updates:
+					[{% for update in fear.updates %}
+						{added:'{{update.added}}', value:'{{update.value}}'},{% endfor %}
+					]},
+			{% endfor %}]
+			
+			var num_fears = fears.length
+			var fear_size = 30
+			var update_size = 20
+			
+			var draw_fear = function(fear, angle) {
+				var updates = fear.updates
+				
+				/* determine cos and sin only once for each fear */
+				var cos = Math.cos(angle*Math.PI/180)
+				var sin = Math.sin(angle*Math.PI/180)
+				
+				var ratio = radius/100
+				
+				/* draw the connections tracking from oldest to most recent update */
+				var last_update = updates[0]
+				var first_update = updates[updates.length-1]
+				
+				var x1 = Math.floor((100-first_update.value)*ratio*cos)+radius
+				var y1 = Math.floor((100-first_update.value)*ratio*sin)+radius
+				
+				var x2 = Math.floor((100-last_update.value)*ratio*cos)+radius
+				var y2 = Math.floor((100-last_update.value)*ratio*sin)+radius
+				
+				if(first_update !== last_update){
+					board.drawLine({strokeStyle:'blue', strokeWidth:4, x1:x1, y1:y1, x2:x2, y2:y2})
+				}
+				
+				/* draw each individual update */
+				$.each(updates, function(index, update){
+					var x = Math.floor((100-update.value)*ratio*cos) + radius
+					var y = Math.floor((100-update.value)*ratio*sin) + radius
+					
+					var dot = $("<canvas width='dot_sizepx' height='dot_sizepx'>".replace(/dot_size/g, update_size))
+					dot.css('left', x-update_size/2).css('top', y-update_size/2).css('position', 'absolute')
+					dot.drawArc({x:update_size/2, y:update_size/2, fillStyle:'black', radius:update_size/2, start:0, end:360})
+					
+					dot.click(function(){box.html(update.value)})
+					
+					target.append(dot)
+				})
+				
+				var x = Math.floor((100-last_update.value)*ratio*cos) + radius
+				var y = Math.floor((100-last_update.value)*ratio*sin) + radius
+				
+				var dot = $("<canvas width='dot_sizepx' height='dot_sizepx'>".replace(/dot_size/g, fear_size))
+				dot.css('left', x-fear_size/2).css('top', y-fear_size/2).css('position', 'absolute')
+				dot.drawArc({x:fear_size/2, y:fear_size/2, fillStyle:'black', radius:fear_size/2, start:0, end:360})
+				
+				/*var click_function = function(){
+					var last_value = last_update.value
+					board.mousemove(function(obj){
+						var mx = obj.offsetX
+						var my = obj.offsetY
+						
+						var dx = radius - mx
+						var dy = radius - my
+						
+						var new_value = Math.ceil((radius - Math.sqrt(dx*dx + dy*dy))*100/radius)
+						if(new_value > 0 && new_value < last_update.value && new_value != last_value) {
+							var x = Math.floor((100-new_value)*ratio*cos) + radius
+							var y = Math.floor((100-new_value)*ratio*sin) + radius
+							
+							dot.css('left', x-fear_size/2)
+							dot.css('right', x-fear_size/2)
+							
+							last_value = new_value
+						}
+					})
+				}*/
+				
+				//dot.click(click_function)
+				
+				dot.click(function(){
+					$('html, body').animate({scrollTop:$('#fear-'+fear.docname).offset().top},{
+						complete:function(){
+							$('#fear-'+fear.docname).trigger('expand')
+						}
+					})
+				})
+				
+				target.append(dot)
+			}
+			
+			$.each(fears, function(index, fear){
+				var angle = index * 360 / num_fears
+				
+				draw_fear(fear, angle)
+			})
+			
+			$('html, body').animate({scrollTop:board.offset().top})
+		})
+	</SCRIPT>
+		
+</HEAD>
+
+<BODY>
+<DIV data-role='page'>
+	<DIV data-role='header'>
+		<H1>CAIP Fear Hierarchy App</H1>
+	</DIV>
+	
+	<DIV data-role='content' id='fear-list'>
+		<DIV data-role='collapsible' id='new-fear-form' >
+		<H3> New Fear </H3>
+		<FORM method='post' action='/' data-ajax='false' >
+			<INPUT name='participant-id' type='hidden' value='{{pid}}'/>
+			<INPUT name='new-fear' type='hidden' value='yes' />
+			<DIV data-role='fieldcontain'>
+				<LABEL for='fear-name'> Name </LABEL>
+				<INPUT name='fear-name' id='fear-name'/>
+			</DIV>
+			<DIV data-role='fieldcontain'>
+				<LABEL for='fear-description'> Description </LABEL>
+				<TEXTAREA name='fear-description' id='fear-description'> </TEXTAREA>
+			</DIV>
+			<DIV data-role='fieldcontain'>
+				<LABEL for='fear-value'> SUDS </LABEL>
+				<INPUT type='range' name='fear-value' id='fear-value' value='50' min='0' max='100' />
+			</DIV>
+			<DIV data-role='fieldcontain'>
+				<FIELDSET data-role='controlgroup' data-type='horizontal' id='fear-avoid'>
+					<LEGEND> Avoidance </LEGEND>
+					<LABEL for='avoidance-1'> yes </LABEL>
+					<INPUT type='radio' name='fear-avoid' id='avoidance-1' value='yes' checked='checked' />
+					<LABEL for='avoidance-2'> no </LABEL>
+					<INPUT type='radio' name='fear-avoid' id='avoidance-2' value='no' />
+				</FIELDSET>
+			</DIV>
+			<INPUT type='submit' value='Add Fear' />
+		</FORM>
+		</DIV>
+		{% for fear in fears %}
+		<DIV data-role='collapsible' id='fear-{{fear.docname}}'>
+			<H3>{{ fear.name }} [{{fear.value}}]</H3>
+			<P> {{fear.description}} </P>
+			<FORM method='post' action='/' data-ajax='false'>
+			<DIV data-role='fieldcontain'>
+				<LABEL for='update-{{fear.name}}'> Update </LABEL>
+				<INPUT type='range' name='update-{{fear.name}}' id='update-{{fear.name}}' value='{{fear.value}}' min='0' max='100' />
+			</DIV>
+			<INPUT type='hidden' name='participant-id' value='{{pid}}' />
+			<INPUT type='hidden' name='fear-name' value='{{fear.name}}' />
+			<INPUT type='hidden' name='update-fear' value='yes' />
+			<INPUT type='submit' value='Update Fear' />
+			</FORM>
+		</DIV>
+		{% endfor %}
+	</DIV>
+	<DIV data-role='content' id='fear-board' style='position:relative; margin:0 auto;'>
+	</DIV>
+</DIV>
+</BODY>
+</HTML>
